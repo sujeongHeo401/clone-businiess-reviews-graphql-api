@@ -10,14 +10,34 @@ const { NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD } = process.env
 
 const typeDefs = fs.readFileSync(path.join(__dirname, "schema.graphql")).toString("utf-8");
 
-const schema = makeAugmentedSchema({typeDefs})
+const resolvers = {
+  Business: {
+    waitTime: (obj, args, context, info) => {
+      const options = [0, 5, 10, 15, 30, 45];
+      return options[Math.floor(Math.random() * options.length)];
+    }
+  }
+};
+
+const schema = makeAugmentedSchema({
+  typeDefs,
+  resolvers,
+  config: {
+    mutation: true,
+    query: {
+      exclude: ["MySecretType"]
+    }
+  }
+})
 const driver = neo4j.driver(
   NEO4J_URI,
   neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD)
 )
 
-const server = new ApolloServer({ schema, context: { driver, neo4jDatabase: "neo4j" } });
+const server = new ApolloServer({ 
+  schema, 
+  context: { driver, neo4jDatabase: "neo4j" } });
 
-server.listen(3000, "0.0.0.0").then(({ url }) => {
+server.listen(4000, "localhost").then(({ url }) => {
   console.log("GraphQL API ready at: ", url);
 });

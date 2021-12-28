@@ -32,10 +32,20 @@ type Category {
    _id: Long!
    name: String!
    businesss: [Business] @relation(name: "IN_CATEGORY", direction: IN)
+   numOfBusiness: Int! @cypher(statement:"""
+      MATCH (this)<-[:IN_CATEGORY]-(b:Business) with b RETURN COUNT(b)
+   """)
 }
 
 type Business {
    _id: Long!
+   averageStars: Float! @cypher(statement:"MATCH (this)<-[:REVIEWS]-(r:Review) RETURN avg(r.stars)") # add scalar field
+   recommended(first: Int = 1): [Business] @cypher(statement: """
+      MATCH (this)<-[:REVIEWS]-(:Review)<-[:WROTE]-(:User)-[:WROTE]->(:Review)-[:REVIEWS]->(rec:Business)
+      WITH rec, COUNT(*) AS score
+      RETURN rec ORDER BY score DESC LIMIT $first
+    """)
+   waitTime: Int! @neo4j_ignore
    address: String!
    businessId: String!
    city: String!
@@ -46,7 +56,28 @@ type Business {
    reviews: [Review] @relation(name: "REVIEWS", direction: IN)
 }
 
-
+type Query {
+    fuzzyBusinessByName(searchString: String): [Business] @cypher(
+      statement: """
+        CALL db.index.fulltext.queryNodes( 'businessNameIndex', $searchString+'~')
+        YIELD node RETURN node
+      """
+   )
+}
+enum BusinessOrdering {
+  businessId_asc
+  businessId_desc
+  name_asc
+  name_desc
+  city_asc
+  city_desc
+  state_asc
+  state_desc
+  address_asc
+  address_desc
+  _id_asc
+  _id_desc
+}
 
 
 
